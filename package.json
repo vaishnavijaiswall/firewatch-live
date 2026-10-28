@@ -1,0 +1,9 @@
+{
+  "name": "firewatch-live",
+  "version": "2.1.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=22.5" },
+  "scripts": { "start": "node server.js", "test:api": "node tests/api.test.js", "test:ui": "python3 tests/ui_test.py" },
+  "dependencies": { "express": "^4.21.2" }
+}

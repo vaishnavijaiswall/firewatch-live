@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>FireWatch Live – Forest Fire Prediction</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<style>
+:root{--bg:#f2f2f7;--card:#fff;--tx:#000;--tx2:#6c6c70;--sep:#e5e5ea;--blue:#007aff;--g:#34c759;--y:#ffb800;--r:#ff3b30;--o:#ff9500;--bar:rgba(249,249,249,.9);--page:#d4d6dc;--fill:rgba(118,118,128,.16);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--card:#1c1c1e;--tx:#fff;--tx2:#98989f;--sep:#38383a;--bar:rgba(28,28,30,.9);--page:#0d0d0f;--fill:rgba(118,118,128,.32)}}
+:root[data-theme="dark"]{--bg:#000;--card:#1c1c1e;--tx:#fff;--tx2:#98989f;--sep:#38383a;--bar:rgba(28,28,30,.9);--page:#0d0d0f;--fill:rgba(118,118,128,.32)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:var(--page);font-family:-apple-system,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;color:var(--tx)}
+.phone{position:relative;width:100%;max-width:410px;height:100%;max-height:860px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+@media(min-width:520px){body{display:flex;align-items:center;justify-content:center;padding:20px}.phone{border-radius:48px;box-shadow:0 0 0 10px #1a1a1c,0 30px 80px rgba(0,0,0,.35);height:min(860px,100%)}}
+.screen{flex:1;overflow-y:auto;padding:14px 16px 20px;display:none}.screen.on{display:block}
+h1{font-size:32px;margin:6px 0 2px;letter-spacing:-.5px}.sub{color:var(--tx2);font-size:14px;margin:0 0 14px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:13px;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+.seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;color:var(--tx);padding:6px 4px;font-size:13px;border-radius:7px;font-weight:500}
+.seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+canvas{width:100%;aspect-ratio:1;display:block;border-radius:12px;touch-action:manipulation}
+.mapw{position:relative;padding:0!important;overflow:hidden}.mapw canvas{border-radius:0}
+#map{height:380px;min-height:300px;z-index:0}.fi{font-size:18px;text-align:center;line-height:20px}
+.mb{z-index:1000;position:absolute;background:var(--bar);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:0;color:var(--tx);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.3);font-size:12px;font-weight:600}
+.tl{left:10px;top:10px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#ea4335}
+.tr{right:10px;top:10px;padding:8px 12px}
+.zm{right:10px;bottom:14px;display:flex;flex-direction:column;overflow:hidden}.zm button{width:38px;height:38px;border:0;background:none;color:var(--tx);font-size:22px}.zm button+button{border-top:.5px solid var(--sep)}
+.stats{display:flex;gap:8px;margin-bottom:12px}.stat{flex:1;background:var(--card);border-radius:12px;padding:10px;text-align:center}
+.stat b{display:block;font-size:22px}.stat span{font-size:11px;color:var(--tx2)}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:.5px solid var(--sep);font-size:15px}
+.row:last-child{border:0}.row span:last-child{color:var(--tx2)}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;color:#fff}
+.Low{background:var(--g)}.Moderate{background:var(--y)}.High{background:var(--o)}.Info{background:#5ac8fa}.Advisory{background:var(--y);color:#000}.Warning{background:var(--o)}.Emergency{background:var(--r)}
+.big{font-size:56px;font-weight:700;letter-spacing:-2px;line-height:1}
+.track{height:10px;border-radius:9px;background:linear-gradient(90deg,#34c759,#ffb800,#ff9500);position:relative;margin:14px 0 6px}
+.knob{position:absolute;top:-4px;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--tx);transform:translateX(-50%);transition:left .25s}
+.sl{margin-bottom:10px;font-size:14px}.sl div{display:flex;justify-content:space-between}.sl input{width:100%;accent-color:var(--blue)}
+.btn{width:100%;border:0;background:var(--blue);color:#fff;font-size:16px;font-weight:600;padding:13px;border-radius:12px}
+.btn.sm{width:auto;padding:7px 14px;font-size:13px;border-radius:99px}.btn.ok{background:var(--g)}
+ul.act{margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.5}
+.al{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:.5px solid var(--sep)}.al:last-child{border:0}
+.al .t{flex:1;font-size:14px}.al .t b{font-size:16px;display:block}.al .t small{color:var(--tx2)}
+.bar{height:8px;border-radius:5px;background:var(--blue);margin-top:3px}
+.hist{display:flex;gap:6px;align-items:flex-end;height:70px;margin:8px 0 12px}.hist div{flex:1;background:var(--g);border-radius:5px 5px 0 0;font-size:10px;color:#fff;text-align:center;min-width:0}
+.tabbar{display:flex;background:var(--bar);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:.5px solid var(--sep);padding:6px 0 8px}
+.tabbar button{flex:1;background:none;border:0;color:var(--tx2);font-size:10px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabbar button.on{color:var(--blue)}.tabbar svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:rgba(40,40,42,.95);color:#fff;padding:10px 16px;border-radius:99px;font-size:13px;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}.toast.show{opacity:1;transform:translateX(-50%)}
+.flow{display:flex;flex-direction:column;gap:0}.step{border-left:3px solid var(--blue);padding-left:12px;margin-left:6px}
+
+input,select,textarea{font:inherit;font-size:15px;color:var(--tx);background:var(--fill);border:0;border-radius:9px;padding:9px 10px;width:100%;margin:0 0 8px}
+textarea{min-height:70px;resize:vertical}label.l{font-size:12px;color:var(--tx2);display:block;margin:2px 0 3px}
+.srch{display:flex;gap:6px}.srch input{margin:0}.res{display:flex;flex-direction:column;gap:4px;margin:6px 0}
+.ri{border:0;background:var(--fill);color:var(--tx);text-align:left;padding:8px 10px;border-radius:9px;font-size:13px}.mut{font-size:12px;color:var(--tx2)}.err{color:var(--r)}
+.sel{font-size:13px;font-weight:600;margin:4px 0 8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.chip{border:0;background:var(--fill);color:var(--tx);font-size:12px;font-weight:600;padding:6px 10px;border-radius:99px}.chip.on{background:var(--blue);color:#fff}
+.chips select{width:auto;margin:0;padding:5px 8px;font-size:12px;border-radius:99px}
+.mapbanner{position:absolute;left:10px;right:10px;top:10px;z-index:1000;background:var(--bar);border-radius:10px;padding:10px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3);display:none}.mapbanner.on{display:block}
+.mapload{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:1000;background:var(--bar);border-radius:99px;padding:5px 12px;font-size:12px;display:none}.mapload.on{display:block}
+.tm{background:var(--card);color:var(--tx);border:1.5px solid var(--blue);border-radius:8px;font-size:12px;font-weight:700;padding:1px 5px;text-align:center;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.pm{width:26px;height:26px;border-radius:50%;background:rgba(255,149,0,.9);border:2px dashed #fff;color:#fff;font-weight:800;text-align:center;line-height:22px;font-size:14px}
+.wt{font-size:13px;line-height:1.5}.wt b{font-size:18px}.wt small{color:#6c6c70}
+.status{font-size:12px;color:var(--tx2);line-height:1.6}.status b{color:var(--tx)}
+.auth{position:absolute;inset:0;z-index:5000;background:var(--bg);overflow-y:auto;padding:30px 18px}.auth.off{display:none}
+.msg{padding:10px 0;border-bottom:.5px solid var(--sep)}.msg:last-child{border:0}.msg .h{display:flex;gap:8px;align-items:center}.msg .h b{flex:1;font-size:15px}.dot{width:9px;height:9px;border-radius:50%;background:var(--blue);flex:none}
+.msg .bd{font-size:14px;margin-top:8px;line-height:1.45;white-space:pre-wrap}.msg small{color:var(--tx2)}
+.badge{position:absolute;top:-2px;margin-left:14px;background:var(--r);color:#fff;font-size:10px;border-radius:99px;min-width:16px;padding:1px 4px}.tabbar button{position:relative}
+.demo{display:inline-block;font-size:10px;font-weight:700;background:var(--y);color:#000;border-radius:5px;padding:1px 5px;margin-left:4px}
+.btn.gray{background:var(--fill);color:var(--tx)}.btn.red{background:var(--r)}.two{display:flex;gap:8px}.two>*{flex:1}
+.lg{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12px;color:var(--tx2)}.lg i{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-right:4px}
+
+/* ---- map fixes: Leaflet must never inherit the app's canvas/img/input rules ---- */
+.leaflet-container{font:inherit;background:#cfd8dc}.leaflet-container img,.leaflet-container canvas{max-width:none!important;aspect-ratio:auto;border-radius:0}
+.leaflet-popup-content{margin:10px 12px;color:#111}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#fff}.leaflet-popup-content .wt small{color:#555}
+.leaflet-control-zoom a{width:34px;height:34px;line-height:34px}
+.mapload{bottom:auto;top:10px}
+.mapbanner .btn.sm{margin-top:6px}
+.ghost{background:none;border:1px solid var(--sep);color:var(--tx)}
+.notice{background:var(--fill);border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.5;margin-bottom:10px}.notice b{color:var(--tx)}
+.tm.D0{border-color:var(--g)}.tm.D1{border-color:var(--y)}.tm.D2{border-color:var(--o)}.tm.D3{border-color:var(--r);background:#ffe5e3;color:#900}
+.Danger0{background:var(--g)}.Danger1{background:var(--y);color:#000}.Danger2{background:var(--o)}.Danger3{background:var(--r)}
+.portal{display:flex;gap:6px;margin-bottom:12px}.portal button{flex:1;border:1.5px solid var(--sep);background:var(--card);color:var(--tx);border-radius:12px;padding:10px 6px;font-size:13px;font-weight:600}.portal button.on{border-color:var(--blue);color:var(--blue)}
+.ctlcol,.mapcol,.detcol{min-width:0}
+/* ---- desktop / laptop: full-width dashboard with a side rail instead of the phone frame ---- */
+@media(min-width:980px){
+ body{display:block;padding:0}
+ .phone{max-width:none;max-height:none;width:100%;height:100vh;border-radius:0;box-shadow:none;display:grid;grid-template-columns:92px minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+ .tabbar{grid-column:1;grid-row:1;flex-direction:column;justify-content:flex-start;gap:6px;border-top:0;border-right:.5px solid var(--sep);padding:18px 6px}
+ .tabbar button{flex:none;width:100%;padding:10px 0;border-radius:12px;font-size:11px}.tabbar button.on{background:var(--fill)}
+ .screen{grid-column:2;grid-row:1;padding:18px 24px 24px}
+ #s0.on{display:grid;grid-template-columns:minmax(0,1fr) 380px;grid-template-areas:"hd hd" "map ctl" "map det";gap:0 18px;align-content:start;grid-template-rows:auto auto 1fr}
+ #s0 .hd{grid-area:hd}.mapcol{grid-area:map}.ctlcol{grid-area:ctl}.detcol{grid-area:det}
+ #map{height:calc(100vh - 250px);min-height:420px}
+ #s1,#s2,#s3,#s4{max-width:760px;width:100%}
+ .auth{position:fixed;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45)}.auth>.box{background:var(--bg);width:440px;max-width:100%;border-radius:20px;padding:22px 20px;box-shadow:0 20px 60px rgba(0,0,0,.4);max-height:100%;overflow:auto}
+ .toast{position:fixed}
+}
+@media(max-width:979px){.auth>.box{display:block}}
+</style><script src="vendor/leaflet/leaflet-src.js"></script></head><body>
+<div class="phone">
+<section class="screen on" id="s0">
+<div class="hd"><h1>🔥 FireWatch</h1><p class="sub">Fire detections · weather · predicted risk (demo model: Western Ghats)</p><div class="notice" id="gate" hidden></div></div>
+<div class="ctlcol">
+<div class="seg" id="scen"><button class="on" data-s="0">Normal</button><button data-s="1">Heatwave</button><button data-s="2">Rainy</button><button data-s="3">Live 🌐</button></div>
+<div class="stats"><div class="stat"><b id="nH" style="color:var(--r)">0</b><span>High</span></div><div class="stat"><b id="nM" style="color:var(--y)">0</b><span>Moderate</span></div><div class="stat"><b id="nL" style="color:var(--g)">0</b><span>Low</span></div></div>
+<div class="card" style="padding:10px 12px"><div id="mapsearch"></div></div>
+<div class="seg" id="mm"><button class="on" data-m="0">Standard</button><button data-m="1">Satellite</button></div>
+<div class="chips" id="chips"><button class="chip on" id="cF">🔴 Detected fires</button><button class="chip on" id="cP">⚠ Predicted risk</button><button class="chip on" id="cT">🌡 Temperature</button>
+<select id="fT" aria-label="Detection time window"><option value="1">Last 24 h</option><option value="2">Last 48 h</option><option value="3">Last 72 h</option></select>
+<select id="fS" aria-label="Predicted severity"><option value="0.6">Predicted: High</option><option value="0.35">Predicted: Moderate+</option></select></div>
+</div>
+<div class="mapcol"><div class="card mapw"><div id="map" role="application" aria-label="Interactive fire and weather map"></div>
+<div class="mapbanner" id="mapErr"></div><div class="mapload" id="mapLoad">Loading map…</div></div>
+<div class="card"><div class="lg"><span><i style="background:#e00;border:2px solid #fff;box-shadow:0 0 0 1px #999"></i>Satellite-detected fire (observed)</span><span><i style="background:#34c759"></i>Low risk</span><span><i style="background:#ffb800"></i>Moderate</span><span><i style="background:#ff9500"></i>High (predicted)</span><span><i style="background:#ff3b30;border:2px dashed #fff;box-shadow:0 0 0 1px #999"></i>Very high (predicted, not a fire)</span><span>🌡 Weather grid point: outline = weather-only fire-danger heuristic</span></div>
+<div class="status" id="status" style="margin-top:8px"></div></div></div>
+<div class="detcol"><div class="card" id="detail"></div></div>
+</section>
+<section class="screen" id="s1">
+<h1>Predict</h1><p class="sub">Enter conditions for any location</p>
+<div class="card"><div class="big" id="pp">0%</div><div id="pl" style="margin-top:8px"></div>
+<div class="track"><div class="knob" id="kn"></div></div><ul class="act" id="pa"></ul></div>
+<div class="card" id="sliders"></div>
+<div class="seg" id="land"><button data-v="1" class="on">Forest</button><button data-v="0.5">Agricultural</button><button data-v="0.1">Urban</button></div>
+</section>
+<section class="screen" id="s2"><div id="alertsRoot"></div></section>
+<section class="screen" id="s3">
+<h1>System</h1><p class="sub">Data → AI/ML → GIS → Alerts</p>
+<div class="card"><h3>1 · Input data</h3><div id="inp"></div></div>
+<div class="card"><h3>2 · Processing</h3><div id="proc"></div><h3 style="margin-top:14px">Feature importance</h3><div id="imp"></div></div>
+<div class="card"><h3>Continuous improvement</h3><div class="hist" id="hist"></div><button class="btn" id="rt">Add new data &amp; retrain model</button></div>
+</section>
+<div class="tabbar" id="tabs">
+<button class="on" data-t="0"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Map</button>
+<button data-t="1"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Predict</button>
+<button data-t="2"><svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/></svg>Alerts</button>
+<button data-t="3"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>System</button>
+<button data-t="4"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Account</button>
+</div>
+<div class="auth" id="auth"><div class="box"><h1>🔥 FireWatch Live</h1><p class="sub">Sign in to view satellite fire detections and official alerts. The map and weather work without an account.</p>
+<div class="portal" id="portal"><button class="on" data-p="user" type="button">👤 Local user</button><button data-p="admin" type="button">🛡 Administrator</button></div>
+<div class="seg" id="authTabs"><button class="on" data-a="login">Log in</button><button data-a="reg">Register</button></div>
+<div class="card"><div id="regOnly" style="display:none"><label class="l">Name</label><input id="aName" autocomplete="name"></div>
+<label class="l">Email</label><input id="aEmail" type="email" autocomplete="email"><label class="l">Password (min 8 characters)</label><input id="aPw" type="password" autocomplete="current-password">
+<div id="regLoc" style="display:none"><label class="l">Your area (optional now, changeable later)</label><div id="aPlace"></div></div>
+<div class="mut err" id="aErr" role="alert"></div><button class="btn" id="aGo">Log in</button></div>
+<button class="btn ghost" id="aGuest" type="button">Continue to the map without signing in</button>
+<p class="mut" id="aNote" style="margin-top:10px">Administrator accounts are created by the server operator; registration always creates a local-user account.</p></div></div>
+<section class="screen" id="s4"><h1>Account</h1><div id="acctRoot"></div></section>
+<div class="toast" id="toast"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const N=16,F=['Temperature','Humidity','Rainfall','Wind speed','Vegetation','Soil moisture','Land burnability'];
+const R=[[15,45],[10,95],[0,25],[0,45],[0.1,0.95],[3,50],[0,1]],U=['°C','%',' mm',' km/h','','%',''];
+const TW=[4,-4,-3,2.5,2,-3.5,2.5];
+const sig=z=>1/(1+Math.exp(-z)),cl=v=>Math.max(0,Math.min(1,v)),nz=(v,i)=>(v-R[i][0])/(R[i][1]-R[i][0]);
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+// ---- Historical fire records (synthetic) ----
+function gen(n,seed,noMiss){const r=rng(seed),X=[],y=[];let miss=0;
+ for(let k=0;k<n;k++){const nx=R.map((_,i)=>i==6?[1,.5,.1][Math.floor(r()*3)]:r());
+  const z=nx.reduce((s,v,i)=>s+TW[i]*(v-.5),0);y.push(r()<sig(z)?1:0);
+  X.push(nx.map(v=>{if(!noMiss&&r()<.04){miss++;return null}return v}))}
+ return{X,y,miss}}
+// ---- AI/ML: logistic regression trained in-browser ----
+const M={w:Array(7).fill(0),b:0,acc:0,ver:1,n:0,miss:0,hist:[]};
+let TR={X:[],y:[]};const TEST=gen(800,999,true);
+function pred(nx){return sig(M.b+nx.reduce((s,v,i)=>s+M.w[i]*v,0))}
+function train(){
+ const m=R.map((_,i)=>{const c=TR.X.map(x=>x[i]).filter(v=>v!==null);return c.reduce((a,b)=>a+b,0)/c.length});
+ const X=TR.X.map(x=>x.map((v,i)=>v===null?m[i]:v)),n=X.length;let w=Array(7).fill(0),b=0;
+ for(let e=0;e<700;e++){const g=Array(7).fill(0);let gb=0;
+  for(let k=0;k<n;k++){let z=b;for(let i=0;i<7;i++)z+=w[i]*X[k][i];const d=sig(z)-TR.y[k];gb+=d;for(let i=0;i<7;i++)g[i]+=d*X[k][i]}
+  for(let i=0;i<7;i++)w[i]-=3*g[i]/n;b-=3*gb/n}
+ M.w=w;M.b=b;M.n=n;
+ let ok=0;TEST.X.forEach((x,k)=>{if((pred(x)>.5?1:0)==TEST.y[k])ok++});
+ M.acc=ok/TEST.X.length;M.hist.push(M.acc);
+ const ps=TEST.X.map(pred),pos=TEST.y.filter(v=>v).length,neg=TEST.y.length-pos;let tp=0,fp=0,fn=0;ps.forEach((p,k)=>{const yh=p>.5?1:0;if(yh&&TEST.y[k])tp++;else if(yh)fp++;else if(TEST.y[k])fn++});
+ const idx=ps.map((p,k)=>[p,TEST.y[k]]).sort((a,b)=>a[0]-b[0]);let rs=0;idx.forEach((v,r)=>{if(v[1])rs+=r+1});
+ M.prec=tp/Math.max(1,tp+fp);M.rec=tp/Math.max(1,tp+fn);M.f1=2*M.prec*M.rec/Math.max(1e-9,M.prec+M.rec);M.auc=(rs-pos*(pos+1)/2)/(pos*neg)}
+let d0=gen(400,1);TR={X:d0.X,y:d0.y};M.miss=d0.miss;train();
+// ---- GIS grid ----
+let scen=0,G=[],sel=[8,8];
+const f=(u,v,k)=>.5+.5*(Math.sin(u*5.1+k)*Math.cos(v*4.3+k*1.3)*.6+Math.sin((u+v)*3.2+k*2)*.4);
+const SC=[[0,0,0,0],[.25,-.2,-.2,-.15],[-.2,.25,.35,.2]];
+function grid(){G=[];const o=SC[scen]||SC[0];
+ for(let i=0;i<N;i++){G[i]=[];for(let j=0;j<N;j++){const u=i/N,v=j/N,t0=f(u,v,1);
+  const L=f(u,v,7),land=L<.18?.1:L<.4?.5:1;
+  let n=[t0+o[0],cl(1-.75*t0+.25*f(u,v,2))+o[1],cl(.8*(1-t0)*f(u,v,3)*1.2)+o[2]*1.3,f(u,v,4),f(u,v,5),cl(.6*(1-t0)+.4*f(u,v,6))+o[3],land];
+  if(scen==3&&LIVE)for(let k=0;k<4;k++)n[k]=nz(lv(i,j,k),k);n=n.map((x,k)=>k==6?x:cl(x));G[i][j]={i,j,n,p:pred(n)}}}}
+const lvl=p=>p<.35?'Low':p<.6?'Moderate':'High';
+const col=p=>`hsl(${125*(1-cl((p-.1)/.75))},78%,${47}%)`;
+const landName=v=>v>.9?'Forest':v>.4?'Agricultural':'Urban';
+const raw=(n,i)=>R[i][0]+(R[i][1]-R[i][0])*n;
+const fmt=(v,i)=>i==4?v.toFixed(2):i==6?'':Math.round(v)+U[i];
+const ACT={High:['Alert forest officials &amp; nearby communities','Deploy patrol and watch-tower crews','Restrict campfires and forest entry','Pre-position water tankers'],Moderate:['Increase patrol frequency','Notify local rangers','Monitor satellite hotspots hourly'],Low:['Continue routine monitoring','Keep public awareness advisories active']};
+const zone=(i,j)=>'Zone '+String.fromCharCode(65+i)+(j+1);
+// ---- Map ----
+// ---- Real map (Leaflet + OpenStreetMap / Esri satellite) ----
+const BB={s:11.6,w:76.0,n:12.4,e:76.8},dh=(BB.n-BB.s)/N,dw=(BB.e-BB.w)/N,ll=(i,j)=>[BB.n-(i+.5)*dh,BB.w+(j+.5)*dw];
+let showRisk=true,HC=null,HG=null,LIVE=null,ov=null,pin=null,box=null;
+const lp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t),rc=t=>t<.5?lp([52,199,89],[255,184,0],t*2):lp([255,184,0],[255,149,0],(t-.5)*2);
+function heat(){const H=64,c=document.createElement('canvas');c.width=c.height=H;const x=c.getContext('2d'),im=x.createImageData(H,H),d=im.data;
+ for(let y=0;y<H;y++)for(let px=0;px<H;px++){const gy=Math.max(0,Math.min(N-1.001,y/H*N-.5)),gx=Math.max(0,Math.min(N-1.001,px/H*N-.5)),i=gy|0,j=gx|0,a=gy-i,b=gx-j,p=(G[i][j].p*(1-b)+G[i][j+1].p*b)*(1-a)+(G[i+1][j].p*(1-b)+G[i+1][j+1].p*b)*a,t=cl((p-.1)/.75),C=rc(t),o=(y*H+px)*4;d[o]=C[0];d[o+1]=C[1];d[o+2]=C[2];d[o+3]=255*(.2+.8*t)}
+ x.putImageData(im,0,0);return c}
+
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const show={fires:true,pred:true,temp:true,days:1,minP:.6};let ME=null,FIRES=[],FS={},WS={},wxL=null,fireL=null,predL=null,searchPin=null,map=null,TL=[],tileErr=0,tileOk=0;
+function mapErr(html){const e=$('#mapErr');e.innerHTML=html;e.classList.add('on')}
+function initMap(){
+ if(!window.L){mapErr('The map library (Leaflet) could not be loaded. Check your internet connection.<br><button class="btn sm" onclick="location.reload()">Retry</button>');return}
+ map=L.map('map',{zoomControl:true,worldCopyJump:true,minZoom:2}).fitBounds([[BB.s,BB.w],[BB.n,BB.e]]);
+ TL=[L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles © Esri'}),L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles © Esri'})];
+ TL.forEach(t=>{t.on('loading',()=>{tileErr=0;tileOk=0;$('#mapLoad').classList.add('on')});t.on('tileload',()=>{tileOk++;$('#mapErr').classList.remove('on')});t.on('load',()=>$('#mapLoad').classList.remove('on'));
+  t.on('tileerror',()=>{tileErr++;if(tileErr>=3&&!tileOk){$('#mapLoad').classList.remove('on');mapErr('Map tiles failed to load (network, blocked host, or the tile server refused the request).<div class="two" style="margin-top:8px"><button class="btn sm" id="tRetry">Retry</button><button class="btn sm gray" id="tAlt">Try the other layer</button></div>');$('#tRetry').onclick=()=>{$('#mapErr').classList.remove('on');tileErr=0;TL.forEach(x=>map.hasLayer(x)&&x.redraw())};$('#tAlt').onclick=()=>$$('#mm button')[map.hasLayer(TL[0])?1:0].click()}})});
+ TL[0].addTo(map);fireL=L.layerGroup().addTo(map);wxL=L.layerGroup().addTo(map);predL=L.layerGroup().addTo(map);
+ new ResizeObserver(()=>map.invalidateSize()).observe($('#map'));
+ let tm;map.on('moveend',()=>{clearTimeout(tm);tm=setTimeout(()=>{refreshWx();refreshFires()},900)});
+ map.on('click',onMapClick);
+}
+function riskAt(lat,lon){if(lat<BB.s||lat>=BB.n||lon<BB.w||lon>=BB.e)return null;const i=Math.floor((BB.n-lat)/dh),j=Math.floor((lon-BB.w)/dw);return G[i]&&G[i][j]}
+function drawMap(){if(!map)return;map.invalidateSize();
+ if(HG!==G){HC=heat();HG=G;const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.drawImage(HC,0,0,256,256);if(ov)ov.remove();ov=L.imageOverlay(c.toDataURL(),[[BB.s,BB.w],[BB.n,BB.e]],{opacity:.55})}
+ show.pred?ov.addTo(map):ov.remove();predL.clearLayers();
+ if(show.pred)G.flat().filter(g=>g.p>=show.minP).sort((a,b)=>b.p-a.p).slice(0,12).forEach(g=>{const[la,lo]=ll(g.i,g.j);L.marker([la,lo],{icon:L.divIcon({html:'<div class="pm">!</div>',className:'',iconSize:[26,26]})}).bindPopup(`<div class="wt"><b>${zone(g.i,g.j)}</b> <span class="pill ${lvl(g.p)}">${lvl(g.p)}</span><br>Predicted risk: <b>${Math.round(g.p*100)}%</b><br><small>PREDICTION by the demo model (synthetic training data). This is <b>not</b> a detected fire.</small><br>${la.toFixed(3)}, ${lo.toFixed(3)}</div>`).addTo(predL)});
+ const[a,b]=sel;if(box)box.remove();box=L.rectangle([[BB.n-(a+1)*dh,BB.w+b*dw],[BB.n-a*dh,BB.w+(b+1)*dw]],{color:'#fff',weight:2,dashArray:'4 3',fill:false}).addTo(map);
+ if(pin)pin.remove();pin=L.marker(ll(a,b)).addTo(map)}
+function counts(){const c={High:0,Moderate:0,Low:0};G.flat().forEach(g=>c[lvl(g.p)]++);$('#nH').textContent=c.High;$('#nM').textContent=c.Moderate;$('#nL').textContent=c.Low}
+function detail(){const g=G[sel[0]][sel[1]],L2=lvl(g.p),[la,lo]=ll(sel[0],sel[1]);
+ const contrib=g.n.map((v,i)=>({i,c:M.w[i]*(v-.5)})).sort((a,b)=>Math.abs(b.c)-Math.abs(a.c)).slice(0,3);
+ $('#detail').innerHTML=`<h3>${zone(...sel)} <span class="demo">DEMO MODEL</span></h3><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span class="big" style="font-size:36px">${Math.round(g.p*100)}%</span><span class="pill ${L2}">${L2} predicted risk</span></div>`+
+ F.map((l,i)=>`<div class="row"><span>${l}</span><span>${i==6?landName(g.n[6]):fmt(raw(g.n[i],i),i)}</span></div>`).join('')+
+ `<div class="row"><span>Main factors</span><span>${contrib.map(x=>F[x.i]+(x.c>0?' ↑':' ↓')).join(', ')}</span></div><div class="row"><span>Cell centre</span><span>${la.toFixed(3)}, ${lo.toFixed(3)}</span></div>
+ <div class="mut" style="margin-top:6px">${scen==3&&LIVE?'Weather inputs: Open-Meteo current conditions (interpolated across a 4×4 sample); vegetation, soil moisture and land use are simulated.':'All inputs for this cell are simulated demo data, not observations.'}</div>`}
+$('#cF').onclick=e=>{show.fires=!show.fires;e.target.classList.toggle('on',show.fires);drawFires()};
+$('#cP').onclick=e=>{show.pred=!show.pred;e.target.classList.toggle('on',show.pred);drawMap()};
+$('#cT').onclick=e=>{show.temp=!show.temp;e.target.classList.toggle('on',show.temp);show.temp?refreshWx():wxL&&wxL.clearLayers();updStatus()};
+$('#fT').onchange=e=>{show.days=+e.target.value;refreshFires()};$('#fS').onchange=e=>{show.minP=+e.target.value;drawMap()};
+$$('#mm button').forEach(b=>b.onclick=()=>{if(!map)return;$$('#mm button').forEach(x=>x.classList.remove('on'));b.classList.add('on');TL.forEach(t=>t.remove());TL[+b.dataset.m].addTo(map).bringToBack()});
+// ---- Weather grid (Open-Meteo current conditions: model analysis, not station observations) ----
+const WMO={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Rime fog',51:'Light drizzle',53:'Drizzle',55:'Dense drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',80:'Rain showers',81:'Rain showers',82:'Violent showers',95:'Thunderstorm',96:'Thunderstorm, hail',99:'Thunderstorm, hail'};
+// Weather-only fire-danger HEURISTIC (transparent rule, NOT the ML model and NOT validated against real fires).
+const DN=['Low','Moderate','High','Very high'];
+function danger(w){if(w.temperature_2m==null||w.relative_humidity_2m==null)return null;
+ const t=cl((w.temperature_2m-10)/30),h=cl((70-w.relative_humidity_2m)/55),wd=cl((w.wind_speed_10m||0)/35),dry=(w.precipitation||0)>=.3?.25:1,sc=(.4*t+.4*h+.2*wd)*dry;
+ return{sc,lv:sc<.3?0:sc<.5?1:sc<.7?2:3}}
+const dirTxt=d=>d==null?'—':['N','NE','E','SE','S','SW','W','NW'][Math.round(d/45)%8]+' ('+Math.round(d)+'°)',nv=(v,u)=>v==null?'—':v+u;
+async function wxFetch(pts){const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pts.map(p=>p[0].toFixed(3))}&longitude=${pts.map(p=>p[1].toFixed(3))}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,weather_code&timezone=auto`);
+ if(r.status===429)throw new Error('rate-limited');if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();return(Array.isArray(j)?j:[j]).map((o,i)=>({lat:pts[i][0],lon:pts[i][1],...(o.current||{})}))}
+const wxHtml=(w,title)=>`<div class="wt"><small>${esc(title||'Weather at '+w.lat.toFixed(2)+', '+w.lon.toFixed(2))}</small><br><b>${nv(w.temperature_2m,'°C')}</b> ${esc(WMO[w.weather_code]||'')}<br>Humidity ${nv(w.relative_humidity_2m,'%')} · Rain ${nv(w.precipitation,' mm')}<br>Wind ${nv(w.wind_speed_10m,' km/h')} from ${dirTxt(w.wind_direction_10m)}<br>${(()=>{const d=danger(w);return d?`<br>Weather-only fire danger: <span class="pill Danger${d.lv}">${DN[d.lv]}</span><br><small>PREDICTION heuristic from temperature, humidity, wind and current rain. Not the ML model, not validated, and <b>not</b> a detected fire.</small>`:''})()}<br><small>Open-Meteo model analysis · ${esc(w.time||'time n/a')} (local) · not a station reading</small></div>`;
+async function refreshWx(){if(!map||!show.temp)return;const b=map.getBounds().pad(-.1),pts=[];
+ for(let i=0;i<4;i++)for(let j=0;j<4;j++){const la=b.getNorth()-(i+.5)/4*(b.getNorth()-b.getSouth()),lo=b.getWest()+(j+.5)/4*(b.getEast()-b.getWest());if(Math.abs(la)<=90)pts.push([la,((lo+540)%360)-180])}
+ try{const ws=await wxFetch(pts);wxL.clearLayers();ws.forEach(w=>L.marker([w.lat,w.lon],{icon:L.divIcon({html:`<div class="tm ${(d=>d?'D'+d.lv:'')(danger(w))}">${w.temperature_2m==null?'–':Math.round(w.temperature_2m)+'°'}</div>`,className:'',iconSize:[40,22],iconAnchor:[20,11]})}).bindPopup(wxHtml(w,'Grid point '+w.lat.toFixed(2)+', '+w.lon.toFixed(2))).addTo(wxL));WS={ok:true,t:Date.now(),n:ws.length}}
+ catch(e){WS={...WS,ok:false,err:e.message}}updStatus()}
+async function onMapClick(e){const r=riskAt(e.latlng.lat,e.latlng.lng);if(r){sel=[r.i,r.j];drawMap();detail()}
+ const p=L.popup().setLatLng(e.latlng).setContent('Loading weather…').openOn(map);try{p.setContent(wxHtml((await wxFetch([[e.latlng.lat,e.latlng.lng]]))[0]))}catch(er){p.setContent('Weather unavailable ('+esc(er.message)+')')}}
+// ---- Fire detections (NASA FIRMS via server proxy) ----
+const revC={};async function rev(la,lo){const k=la.toFixed(2)+','+lo.toFixed(2);if(revC[k])return revC[k];const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&lat=${la}&lon=${lo}`);return revC[k]=(await r.json()).display_name||'Unnamed area'}
+function drawFires(){if(!map)return;fireL.clearLayers();if(!show.fires)return;FIRES.slice(0,2000).forEach(f=>{const m=L.circleMarker([f.lat,f.lon],{radius:7,color:'#fff',weight:2,fillColor:'#e00',fillOpacity:.95,bubblingMouseEvents:false});
+ m.bindPopup(()=>{const r=riskAt(f.lat,f.lon);return `<div class="wt"><b style="color:#e00">Satellite-detected fire</b><br>${f.lat.toFixed(4)}, ${f.lon.toFixed(4)}<br><span class="rg">Looking up place name…</span><br>Detected: ${esc(f.time)}<br>Source: ${esc(f.source)} (${esc(f.satellite)})<br>Confidence: ${esc(f.confidence)} · FRP ${f.frp} MW<br>Status: thermal anomaly seen from orbit, not ground-verified<br>${r?'Model risk here (demo): '+Math.round(r.p*100)+'% '+lvl(r.p):'<small>No risk model coverage here (demo model covers the Western Ghats region only).</small>'}</div>`});
+ m.on('popupopen',async ev=>{const el=ev.popup.getElement()?.querySelector('.rg');try{const n=await rev(f.lat,f.lon);if(el)el.textContent='Place: '+n}catch{if(el)el.textContent='Place name unavailable'}});m.addTo(fireL)})}
+async function refreshFires(){if(!map)return;if(!ME){FIRES=[];FS={ok:false,msg:'Satellite detections need a free account: log in to view NASA FIRMS data.',guest:true};drawFires();updStatus();return}const b=map.getBounds();
+ try{const j=await api('GET',`/api/fires?bbox=${Math.max(-180,b.getWest())},${Math.max(-90,b.getSouth())},${Math.min(180,b.getEast())},${Math.min(90,b.getNorth())}&days=${show.days}`);FIRES=j.fires||[];FS={ok:true,t:Date.now(),n:FIRES.length,note:j.note,at:j.fetched_at}}
+ catch(e){FIRES=[];FS={ok:false,msg:e.data?.message||e.message,nc:e.data?.error==='not_configured'}}drawFires();updStatus()}
+function updStatus(){const tm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),old=t=>Date.now()-t>30*60e3;let w='Weather: ',f='Fire detections: ';
+ w+=!show.temp?'off':WS.t?(WS.ok?`<b>Open-Meteo</b> model analysis · updated ${tm(WS.t)}`:`<b style="color:var(--r)">update failed (${esc(WS.err)})</b> · showing data from ${tm(WS.t)}`)+(old(WS.t)?' <b style="color:var(--r)">· OUTDATED</b>':''):WS.err?`<b style="color:var(--r)">unavailable (${esc(WS.err)})</b>`:'loading…';
+ f+=FS.ok?`<b>NASA FIRMS</b> VIIRS · ${FS.n} in view · updated ${tm(FS.t)}${FS.note?' · '+esc(FS.note):''}`:FS.msg?`<b style="color:var(--r)">${esc(FS.msg)}</b>`:'loading…';
+ $('#status').innerHTML=w+'<br>'+f+'<br><span>Satellite hotspots can lag the overpass by hours; no marker does not prove no fire. Predicted-risk cells are <b>demo model output</b>, covering the Western Ghats region only.</span>'}
+// ---- Live weather (Open-Meteo, free, no API key) ----
+function lv(i,j,k){const y=Math.max(0,Math.min(2.999,(i+.5)/N*4-.5)),x=Math.max(0,Math.min(2.999,(j+.5)/N*4-.5)),a=y|0,b=x|0,fy=y-a,fx=x-b,q=(r,c)=>LIVE[r*4+c][k];return(q(a,b)*(1-fx)+q(a,b+1)*fx)*(1-fy)+(q(a+1,b)*(1-fx)+q(a+1,b+1)*fx)*fy}
+async function live(){try{const la=[],lo=[];for(let a=0;a<4;a++)for(let b=0;b<4;b++){la.push((BB.n-(a+.5)/4*(BB.n-BB.s)).toFixed(3));lo.push((BB.w+(b+.5)/4*(BB.e-BB.w)).toFixed(3))}
+ const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m`),j=await r.json();
+ LIVE=j.map(o=>[o.current.temperature_2m,o.current.relative_humidity_2m,o.current.precipitation,o.current.wind_speed_10m]);toast('Live weather loaded')}catch(e){toast('Live weather failed – check internet')}}
+// ---- Predict ----
+const P=[32,40,2,18,.6,18,1];
+$('#sliders').innerHTML=F.slice(0,6).map((l,i)=>`<div class="sl"><div><span>${l}</span><b id="v${i}"></b></div><input type="range" id="r${i}" min="${R[i][0]}" max="${R[i][1]}" step="${i==4?.01:1}" value="${P[i]}"></div>`).join('');
+function predict(){P.slice(0,6).forEach((_,i)=>{P[i]=+$('#r'+i).value;$('#v'+i).textContent=fmt(P[i],i)});
+ const nxp=P.map(nz),p=pred(nxp),L=lvl(p);$('#pp').textContent=Math.round(p*100)+'%';$('#pp').style.color=`var(--${L=='Low'?'g':L=='High'?'o':'y'})`;
+ $('#pl').innerHTML=`<span class="pill ${L}">${L} fire risk</span>`;$('#kn').style.left=(p*100)+'%';
+ const cf=nxp.map((v,i)=>({i,c:M.w[i]*(v-.5)})).sort((a,b)=>Math.abs(b.c)-Math.abs(a.c)).slice(0,3);$('#pl').innerHTML+=`<div class="mut" style="margin-top:6px">Main factors: ${cf.map(x=>F[x.i]+(x.c>0?' ↑ raises':' ↓ lowers')).join(' · ')}<br>Demo model, synthetic training data.</div>`;
+ $('#pa').innerHTML=ACT[L].map(a=>`<li>${a}</li>`).join('')}
+$$('#sliders input').forEach(e=>e.oninput=predict);
+$$('#land button').forEach(b=>b.onclick=()=>{$$('#land button').forEach(x=>x.classList.remove('on'));b.classList.add('on');P[6]=+b.dataset.v;predict()});
+// ---- API / places / alerts / auth ----
+const api=async(m,u,b)=>{let r;try{r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined,credentials:'same-origin'})}catch{const e=new Error('Backend not reachable (is the server running?)');e.status=0;throw e}
+ let j={};try{j=await r.json()}catch{}if(!r.ok){const e=new Error(j.error||j.message||'HTTP '+r.status);e.status=r.status;e.data=j;throw e}return j};
+function toPlace(r){const a=r.address||{},pk=(...k)=>k.map(x=>a[x]).find(Boolean)||null,bb=r.boundingbox;
+ return{name:r.display_name,country:a.country||null,state:pk('state','region','province'),district:pk('state_district','county','district','city_district')||pk('city','town','municipality'),area:pk('city','town','village','suburb','neighbourhood','hamlet'),lat:+r.lat,lon:+r.lon,bbox:bb?[+bb[2],+bb[0],+bb[3],+bb[1]]:null}}
+const placeLabel=p=>[...new Set([p.area,p.district,p.state,p.country].filter(Boolean))].join(', ')||p.name;
+async function searchPlaces(q){const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q='+encodeURIComponent(q));if(!r.ok)throw 0;return(await r.json()).map(toPlace)}
+function placePicker(el,cb){el.innerHTML='<div class="srch"><input placeholder="Search city, district, state or country" aria-label="Search places"><button class="btn sm" type="button">Search</button></div><div class="res"></div><div class="sel"></div>';
+ const inp=el.querySelector('input'),res=el.querySelector('.res'),sl=el.querySelector('.sel');
+ const go=async()=>{const q=inp.value.trim();if(q.length<2)return;res.innerHTML='<div class="mut">Searching…</div>';try{const rs=await searchPlaces(q);res.innerHTML=rs.length?rs.map((p,i)=>`<button type="button" class="ri" data-i="${i}">${esc(p.name)}</button>`).join(''):'<div class="mut">No places found. Try a different spelling.</div>';
+  res.querySelectorAll('.ri').forEach(b=>b.onclick=()=>{const p=rs[+b.dataset.i];res.innerHTML='';sl.textContent='Selected: '+placeLabel(p);cb(p)})}catch{res.innerHTML='<div class="mut err">Place search is unavailable (network or rate limit). Try again in a moment.</div>'}};
+ el.querySelector('button').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go()}}}
+function goTo(p){if(!map)return;if(p.bbox&&p.bbox[0]!==p.bbox[2])map.fitBounds([[p.bbox[1],p.bbox[0]],[p.bbox[3],p.bbox[2]]]);else map.setView([p.lat,p.lon],11);
+ if(searchPin)searchPin.remove();searchPin=L.marker([p.lat,p.lon]).addTo(map).bindPopup('Loading weather…').openPopup();wxFetch([[p.lat,p.lon]]).then(w=>searchPin.setPopupContent('<b>'+esc(placeLabel(p))+'</b><br>'+wxHtml(w[0],'Current weather'))).catch(e=>searchPin.setPopupContent('<b>'+esc(placeLabel(p))+'</b><br>Weather unavailable ('+esc(e.message)+')'))}
+const fdt=t=>new Date(t).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}),SEVC={Information:'Info',Advisory:'Advisory',Warning:'Warning',Emergency:'Emergency'};
+let MSGS=[],ADM=[],draft=null,tgt=null;
+function setBadge(n){const b=$('#tabs [data-t="2"]');let e=b.querySelector('.badge');if(!n){e&&e.remove();return}if(!e){e=document.createElement('span');e.className='badge';b.appendChild(e)}e.textContent=n}
+async function loadMsgs(){if(!ME||ME.role!=='user')return;try{const j=await api('GET','/api/messages');MSGS=j.messages;setBadge(j.unread)}catch{}}
+function alerts(){if(!ME)return;const R=$('#alertsRoot');ME.role==='admin'?adminAlerts(R):userMsgs(R)}
+async function userMsgs(R){await loadMsgs();const un=MSGS.filter(m=>!m.read).length;
+ R.innerHTML=`<h1>Messages</h1><p class="sub">Official alerts for ${esc(ME.area||ME.district||ME.state||ME.country||'your area')} and all-user notices</p><div class="two" style="margin-bottom:10px"><div class="mut" style="align-self:center">${un} unread</div><button class="btn sm gray" id="mAll">Mark all read</button></div><div class="card">${MSGS.length?MSGS.map(m=>`<div class="msg" data-id="${m.id}"><div class="h">${m.read?'':'<span class="dot"></span>'}<b>${esc(m.title)}</b><span class="pill ${SEVC[m.severity]}">${m.severity}</span></div><small>${esc(m.region)} · ${fdt(m.created_at)}${m.status==='resolved'?' · RESOLVED':''}</small><div class="bd" hidden></div></div>`).join(''):'<p class="sub" style="margin:0">No messages for your area yet. Set your location in Account to receive regional alerts.</p>'}</div>`;
+ $('#mAll').onclick=async()=>{await api('POST','/api/messages/read-all');userMsgs(R)};
+ R.querySelectorAll('.msg').forEach(el=>el.onclick=async()=>{const m=MSGS.find(x=>x.id==el.dataset.id),bd=el.querySelector('.bd');if(!bd.hidden){bd.hidden=true;return}
+  bd.hidden=false;bd.innerHTML=esc(m.body)+(m.actions.length?'<br><b>Recommended actions</b><ul class="act">'+m.actions.map(a=>'<li>'+esc(a)+'</li>').join('')+'</ul>':'')+(m.bbox?'<br><button class="btn sm" data-map="1">Show affected area on map</button>':'');
+  const mb=bd.querySelector('[data-map]');if(mb)mb.onclick=e=>{e.stopPropagation();$('#tabs [data-t="0"]').click();setTimeout(()=>map&&map.fitBounds([[m.bbox[1],m.bbox[0]],[m.bbox[3],m.bbox[2]]]),50)};
+  if(!m.read){m.read=true;el.querySelector('.dot')?.remove();try{await api('POST','/api/messages/'+m.id+'/read');setBadge(MSGS.filter(x=>!x.read).length)}catch{}}})}
+async function adminAlerts(R){let st={},hs=[];try{st=await api('GET','/api/admin/stats');ADM=(await api('GET','/api/admin/alerts')).alerts}catch(e){R.innerHTML='<div class="card err">'+esc(e.message)+'</div>';return}
+ const hz=G.flat().filter(g=>g.p>=.6).length;
+ R.innerHTML=`<h1>Alert management</h1><p class="sub">Administrator dashboard</p><div class="stats"><div class="stat"><b>${FS.ok?FS.n:'–'}</b><span>Detections in view</span></div><div class="stat"><b style="color:var(--o)">${hz}</b><span>High-risk cells (demo)</span></div><div class="stat"><b>${st.activeAlerts}</b><span>Active alerts</span></div></div>
+ <div class="card"><h3>Data freshness</h3><div class="status">${$('#status').innerHTML}</div></div>
+ <div class="card" id="cmp"><h3 id="cmpH">New alert</h3><label class="l">Title</label><input id="qT" maxlength="120"><label class="l">Message</label><textarea id="qB" maxlength="2000"></textarea><label class="l">Recommended actions (one per line, optional)</label><textarea id="qA"></textarea>
+ <div class="two"><div><label class="l">Severity</label><select id="qS"><option>Information</option><option>Advisory</option><option selected>Warning</option><option>Emergency</option></select></div><div><label class="l">Audience</label><select id="qC"><option value="all">All users</option><option value="country">Country</option><option value="state">State / province</option><option value="district">District</option><option value="area">Local area</option></select></div></div>
+ <div id="qP" style="display:none"><label class="l">Target place</label><div id="qPP"></div></div><div class="mut err" id="qE" role="alert"></div><button class="btn" id="qPrev">Preview</button><div id="qPv"></div></div>
+ <div class="card"><h3>Alert history</h3>${ADM.length?ADM.map(a=>`<div class="msg"><div class="h"><b>${esc(a.title)}</b><span class="pill ${SEVC[a.severity]}">${a.severity}</span></div><small>${esc(a.region)} · ${fdt(a.created_at)} · ${a.status.toUpperCase()}</small><div class="bd">${esc(a.body)}</div><small>${a.recipients} matching user(s) · ${a.read_count} read · ${esc(a.delivery)}</small><br><button class="btn sm gray" data-edit="${a.id}">Edit wording</button> ${a.status==='active'?`<button class="btn sm gray" data-res="${a.id}">Mark resolved</button>`:''}${a.updated_at?` <small>edited ${fdt(a.updated_at)}</small>`:''}</div>`).join(''):'<p class="sub" style="margin:0">No alerts sent yet.</p>'}</div>`;
+ const place=$('#qPP');placePicker(place,p=>tgt=p);tgt=null;let editId=null;$('#qC').onchange=e=>{$('#qP').style.display=e.target.value==='all'?'none':'block'};
+ $('#qPrev').onclick=()=>{const sc=$('#qC').value,t=tgt||{},E=$('#qE');E.textContent='';
+  if(editId){draft={title:$('#qT').value.trim(),body:$('#qB').value.trim(),severity:$('#qS').value,actions:$('#qA').value.split('\n').map(s=>s.trim()).filter(Boolean)};
+   if(draft.title.length<3||draft.body.length<5){E.textContent='Enter a title and message.';return}
+   $('#qPv').innerHTML=`<div class="card" style="border:1px solid var(--sep);margin-top:10px"><h3>Preview of changes</h3><span class="pill ${SEVC[draft.severity]}">${draft.severity}</span> <b>${esc(draft.title)}</b><div class="bd" style="white-space:pre-wrap;margin:6px 0">${esc(draft.body)}</div>${draft.actions.length?'<ul class="act">'+draft.actions.map(a=>'<li>'+esc(a)+'</li>').join('')+'</ul>':''}<div class="mut">Users already targeted will see the updated text. Audience is unchanged.</div><button class="btn red" id="qSend" style="margin-top:8px">Save changes</button></div>`;
+   $('#qSend').onclick=async()=>{try{await api('PUT','/api/admin/alerts/'+editId,draft);toast('Alert updated');adminAlerts(R)}catch(e){$('#qE').textContent=e.message}};return}
+  draft={title:$('#qT').value.trim(),body:$('#qB').value.trim(),severity:$('#qS').value,scope:sc,t_country:t.country,t_state:t.state,t_district:t.district,t_area:t.area,bbox:sc==='all'?null:t.bbox,actions:$('#qA').value.split('\n').map(s=>s.trim()).filter(Boolean)};
+  if(draft.title.length<3||draft.body.length<5){E.textContent='Enter a title and message.';return}
+  const need={all:[],country:['country'],state:['country','state'],district:['country','state','district'],area:['country','state','district','area']}[sc].filter(k=>!draft['t_'+k]);
+  if(sc!=='all'&&!tgt){E.textContent='Search and select a target place.';return}if(need.length){E.textContent='The selected place has no '+need.join(' / ')+' value; choose a broader audience or another place.';return}
+  $('#qPv').innerHTML=`<div class="card" style="border:1px solid var(--sep);margin-top:10px"><h3>Preview</h3><span class="pill ${SEVC[draft.severity]}">${draft.severity}</span> <b>${esc(draft.title)}</b><div class="bd" style="white-space:pre-wrap;margin:6px 0">${esc(draft.body)}</div>${draft.actions.length?'<ul class="act">'+draft.actions.map(a=>'<li>'+esc(a)+'</li>').join('')+'</ul>':''}<div class="mut">Audience: ${sc==='all'?'All users':esc(placeLabel(tgt))+' ('+sc+' level)'} · in-app inbox only</div><button class="btn red" id="qSend" style="margin-top:8px">Confirm &amp; send</button></div>`;
+  $('#qSend').onclick=async()=>{try{await api('POST','/api/admin/alerts',draft);toast('Alert saved');adminAlerts(R)}catch(e){$('#qE').textContent=e.message}}};
+ R.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const a=ADM.find(x=>x.id==b.dataset.edit);if(!a)return;editId=a.id;
+  $('#cmpH').textContent='Edit alert #'+a.id+' (audience cannot be changed)';$('#qT').value=a.title;$('#qB').value=a.body;$('#qA').value=a.actions.join('\n');$('#qS').value=a.severity;$('#qC').disabled=true;$('#qP').style.display='none';$('#qPrev').textContent='Preview changes';$('#qPv').innerHTML='';$('#cmp').scrollIntoView({behavior:'smooth',block:'start'})});
+ R.querySelectorAll('[data-res]').forEach(b=>b.onclick=async()=>{await api('POST','/api/admin/alerts/'+b.dataset.res+'/resolve');adminAlerts(R)})}
+async function account(){const R=$('#acctRoot');if(!ME)return;let h=`<div class="card"><h3>${ME.role==='admin'?'Administrator':'Local user'}</h3><div class="row"><span>Name</span><span>${esc(ME.name)}</span></div><div class="row"><span>Email</span><span>${esc(ME.email)}</span></div><div class="row"><span>Saved area</span><span>${esc(placeLabel(ME)||'not set')}</span></div></div>`;
+ if(ME.role==='user')h+='<div class="card"><h3>Change my area</h3><div id="chLoc"></div></div>';
+ if(ME.role==='admin'){try{const u=(await api('GET','/api/admin/users')).users;h+='<div class="card"><h3>Users &amp; roles</h3>'+u.map(x=>`<div class="al"><div class="t"><b>${esc(x.name)}</b><small>${esc(x.email)} · ${esc(placeLabel(x)||'no area')}</small></div>${x.id===ME.id?'<span class="mut">you</span>':`<select data-u="${x.id}" style="width:auto;margin:0"><option ${x.role==='user'?'selected':''}>user</option><option ${x.role==='admin'?'selected':''}>admin</option></select>`}</div>`).join('')+'</div>'}catch(e){h+='<div class="card err">'+esc(e.message)+'</div>'}}
+ R.innerHTML=h+'<button class="btn gray" id="lo">Log out</button>';
+ if(ME.role==='user')placePicker($('#chLoc'),async p=>{try{ME=(await api('PUT','/api/me/location',{country:p.country,state:p.state,district:p.district,area:p.area,lat:p.lat,lon:p.lon})).user;goTo(p);toast('Area updated');account()}catch(e){toast(e.message)}});
+ R.querySelectorAll('[data-u]').forEach(s=>s.onchange=async()=>{try{await api('PUT','/api/admin/users/'+s.dataset.u+'/role',{role:s.value});toast('Role updated')}catch(e){toast(e.message);account()}});
+ $('#lo').onclick=async()=>{await api('POST','/api/logout');location.reload()}}
+let timers=false;
+function boot(u){ME=u;$('#auth').classList.add('off');$('#gate').hidden=true;const t2=$('#tabs [data-t="2"]');t2.lastChild.textContent=u.role==='admin'?'Alerts':'Messages';
+
+ if(u.lat!=null&&map)map.setView([u.lat,u.lon],u.area?11:u.district?9:7);else if(map)map.fitBounds([[BB.s,BB.w],[BB.n,BB.e]]);
+ refresh();refreshWx();refreshFires();loadMsgs();
+ if(!timers){timers=true;setInterval(()=>{refreshWx();refreshFires()},10*60e3);setInterval(loadMsgs,60e3)}setTimeout(()=>map&&map.invalidateSize(),50)}
+let authMode='login',portal='user';
+function syncAuth(){const adm=portal==='admin';$$('#portal button').forEach(x=>x.classList.toggle('on',x.dataset.p===portal));
+ $('#authTabs').style.display=adm?'none':'flex';if(adm)authMode='login';
+ $('#regOnly').style.display=$('#regLoc').style.display=authMode==='reg'?'block':'none';
+ $('#aGo').textContent=adm?'Administrator log in':authMode==='reg'?'Create account':'Log in';
+ $('#aNote').textContent=adm?'Administrator accounts are created by the server operator. Registration is not available here.':'Administrator accounts are created by the server operator; registration always creates a local-user account.';
+ $('#aErr').textContent=''}
+$$('#portal button').forEach(b=>b.onclick=()=>{portal=b.dataset.p;syncAuth()});
+$$('#authTabs button').forEach(b=>b.onclick=()=>{authMode=b.dataset.a;$$('#authTabs button').forEach(x=>x.classList.toggle('on',x===b));syncAuth()});
+let regPlace=null;placePicker($('#aPlace'),p=>regPlace=p);placePicker($('#mapsearch'),goTo);
+function showAuth(){$('#auth').classList.remove('off');syncAuth()}
+function gate(html){const g=$('#gate');g.innerHTML=html;g.hidden=!html}
+function enterGuest(why){$('#auth').classList.add('off');ME=null;
+ const fileMode=location.protocol==='file:';
+ gate(why==='offline'?'<b>Backend not reachable.</b> '+(fileMode?'This page was opened as a file, so map tiles may be refused by OpenStreetMap and login cannot work. ':'')+'Start the server (<code>npm start</code>) and open <b>http://localhost:3000</b>. Until then the map, weather and place search work; login, alerts and satellite detections need the server.':'<b>Browsing as guest.</b> The map, weather and place search are available. <a href="#" id="gLogin">Log in</a> for satellite fire detections and official alerts.');
+ const l=$('#gLogin');if(l)l.onclick=e=>{e.preventDefault();showAuth()};
+ refreshWx();refreshFires();setTimeout(()=>map&&map.invalidateSize(),50)}
+$('#aGuest').onclick=()=>enterGuest('guest');
+$('#aGo').onclick=async()=>{const E=$('#aErr');E.textContent='';const body={email:$('#aEmail').value,password:$('#aPw').value};
+ if(portal==='admin')body.portal='admin';else if(authMode==='login')body.portal='user';
+ if(authMode==='reg'&&portal==='user'){body.name=$('#aName').value;if(regPlace)Object.assign(body,{country:regPlace.country,state:regPlace.state,district:regPlace.district,area:regPlace.area,lat:regPlace.lat,lon:regPlace.lon})}
+ try{boot((await api('POST',authMode==='reg'&&portal==='user'?'/api/register':'/api/login',body)).user)}catch(e){E.textContent=e.message}};
+$('#aPw').onkeydown=e=>{if(e.key==='Enter')$('#aGo').click()};
+function toast(t){const e=$('#toast');e.textContent=t.length>38?t.slice(0,36)+'…':t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200)}
+// ---- System ----
+function system(){
+ $('#inp').innerHTML=[['Weather data','temp, humidity, rain, wind'],['Satellite images','Sentinel / ISRO / NASA FIRMS'],['Vegetation density','NDVI forest health'],['Soil moisture','% in topsoil'],['Land use data','forest · agri · urban'],['Historical fire records',M.n+' synthetic (demo)']].map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+ $('#proc').innerHTML=[['Records used',M.n],['Missing values imputed',M.miss],['Normalization','Min–max'],['Model','Logistic regression'],['Test accuracy',(M.acc*100).toFixed(1)+'%'],['Precision / Recall',M.prec.toFixed(2)+' / '+M.rec.toFixed(2)],['F1 · ROC-AUC',M.f1.toFixed(2)+' · '+M.auc.toFixed(2)],['Data','SYNTHETIC (demo)'],['Model version','v'+M.hist.length],['GIS grid',N+'×'+N+' cells']].map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+ const mx=Math.max(...M.w.map(Math.abs));
+ $('#proc').insertAdjacentHTML('beforeend','<p class="mut">Trained on synthetic data generated in your browser. Metrics show fit to a made-up rule, NOT real-world fire prediction accuracy. A real model needs validated historical fire records (e.g. FIRMS archive + ERA5 weather + land cover).</p>');
+ $('#imp').innerHTML=F.map((l,i)=>`<div style="font-size:13px;margin-top:8px">${l} <span style="color:var(--tx2)">${M.w[i]>0?'↑ raises':'↓ lowers'} risk</span><div class="bar" style="width:${Math.abs(M.w[i])/mx*100}%;background:var(--${M.w[i]>0?'r':'g'})"></div></div>`).join('');
+ const lo=Math.min(...M.hist)-.05;$('#hist').innerHTML=M.hist.map((a,i)=>`<div style="height:${Math.max(20,(a-lo)/(1-lo)*100)}%">${(a*100).toFixed(0)}</div>`).join('')}
+$('#rt').onclick=()=>{const d=gen(400,100+M.hist.length,0);TR.X.push(...d.X);TR.y.push(...d.y);M.miss+=d.miss;train();grid();refresh();toast('Model retrained · accuracy '+(M.acc*100).toFixed(1)+'%')};
+// ---- Wiring ----
+function refresh(){counts();drawMap();detail();predict();if(ME&&$('#s2').classList.contains('on'))alerts();system();updStatus()}
+$$('#scen button').forEach(b=>b.onclick=()=>{$$('#scen button').forEach(x=>x.classList.remove('on'));b.classList.add('on');scen=+b.dataset.s;(scen==3&&!LIVE?live():Promise.resolve()).then(()=>{grid();refresh()})});
+$$('#tabs button').forEach(b=>b.onclick=()=>{if(!ME&&(b.dataset.t==2||b.dataset.t==4)){showAuth();return}$$('#tabs button').forEach(x=>x.classList.remove('on'));b.classList.add('on');$$('.screen').forEach(s=>s.classList.remove('on'));$('#s'+b.dataset.t).classList.add('on');if(b.dataset.t==0){setTimeout(drawMap,0);setTimeout(()=>map&&map.invalidateSize(),300)}if(b.dataset.t==2)alerts();if(b.dataset.t==4)account()});
+addEventListener('resize',()=>map&&map.invalidateSize());
+initMap();grid();refresh();
+api('GET','/api/me').then(j=>j.user?boot(j.user):showAuth()).catch(e=>{if(e.status===0)enterGuest('offline');else{showAuth();$('#aErr').textContent=e.message}});
+</script></body></html>
